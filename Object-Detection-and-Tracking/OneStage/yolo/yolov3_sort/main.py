@@ -341,7 +341,6 @@ while True:
 
 	# draw the error:
 	#cv2.putText(frame, str("Error: " + str(round(abs(counter-real_counter)/real_counter,2))), (int(width_line/2), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-	#cv2.putText(frame, , (int(width_line/2+20), int(height_line / 7)), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 5)
 
 	if counter_line_angle >= 45 and counter_line_angle <= 135:
 		cv2.putText(frame, str("Left - Right ="), (int(width_line-width_line/9),20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
