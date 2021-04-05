@@ -14,12 +14,10 @@ for f in files:
 from sort import *
 tracker = Sort()
 memory = {}
-#line = [(0, 500), (1920, 500)] #在这里可以修改检测线的两点坐标
-#line = [(900, 0), (900, 1920)] #在这里可以修改检测线的两点坐标
 counter = 0
 left_counter = 0
 right_counter = 0
-#real_counter = 18
+#real_counter = 18 # if we want to calculate the error.
 import math
 from collections import deque
 import warnings
@@ -79,6 +77,8 @@ vs = cv2.VideoCapture(args["input"])
 height_line = vs.get(cv2.CAP_PROP_FRAME_HEIGHT)
 width_line = vs.get(cv2.CAP_PROP_FRAME_WIDTH)
 
+# rotate the line in the given angle
+# own defined rotation
 counter_line_angle = args["angle"]
 if (counter_line_angle > 44 and counter_line_angle < 91):
 	move = 45 / counter_line_angle
@@ -98,13 +98,23 @@ elif (counter_line_angle > 135 and counter_line_angle < 181):
 else:
     raise Exception('Wrong input number for angle!') from None
 
+# move the vertical line left or right
+# if the "leftOrRight" value is 1.0 then the line is on the right hand side of the video
+# if the "leftOrRight" value is 0.0 then the line is on the left hand side of the video
+# if the "leftOrRight" value is 0.5 then the vertical line is on the center of the video
+# etc.
 left_right = args["leftOrRight"] #for vertical lines
 if left_right <= 1.0 and left_right >= 0.0 and counter_line_angle >= 45 and counter_line_angle <= 135: # if its not default
 	x1 = line[0][0]
 	x2 = line[1][0]
-	diff_x = x1 - x2
+	diff_x = x1 - x2 # save the distance between the points
 	line = [(int(int(width_line)*left_right),0),(int(int(width_line)*left_right-diff_x),int(height_line))]
 
+# move the horizontal line up or down
+# if the "topOrBottom" value is 1.0 then the line is on the bottom of the video
+# if the "topOrBottom" value is 0.0 then the line is on the top of the video
+# if the "topOrBottom" value is 0.5 then the horizontal line is on the center of the video
+# etc.
 up_down = args["topOrBottom"] #for horizontal lines
 if (up_down <= 1.0 and up_down >= 0.0 and counter_line_angle > 135 and counter_line_angle <= 180) or \
 		(up_down <= 1.0 and up_down >= 0.0 and counter_line_angle >= 0 and  counter_line_angle < 45) : # if its not default
@@ -112,9 +122,6 @@ if (up_down <= 1.0 and up_down >= 0.0 and counter_line_angle > 135 and counter_l
 	y2 = line[1][1]
 	diff_y = y1 - y2
 	line = [(line[0][0],int(int(height_line)*up_down)),(line[1][0],int(int(height_line)*up_down-diff_y))]
-
-#line = [(int(width_line/2), 0), (int(width_line/2), int(height_line))] #vertical line
-#line = [(0, int(height_line/2)), (int(width_line), int(height_line/2))] #horizontal line
 
 writer = None
 (W, H) = (None, None)
@@ -135,13 +142,13 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
-already_found = []
-pts = [deque(maxlen=30) for _ in range(9999)]
+already_found = [] # list of the IDs that we've already found
+pts = [deque(maxlen=30) for _ in range(9999)] # for the motion path
 warnings.filterwarnings('ignore')
-df_save = pd.DataFrame(columns=['personId','direction'])
+df_save = pd.DataFrame(columns=['personId','direction']) # df containing the intersects
 input_name = args['input']
 input_name = input_name.split('/')[-1]
-input_name = input_name.split('.')[0]
+input_name = input_name.split('.')[0] # save the df based on the input file name
 
 # loop over frames from the video file stream
 while True:
@@ -252,19 +259,18 @@ while True:
 			# fill the box
 			sub_img = frame[y:int(h), x:int(w)]
 			rect = np.zeros(sub_img.shape, dtype=np.uint8)
-			res = cv2.addWeighted(sub_img, 0.5, rect, 0.5, 1.0)
+			res = cv2.addWeighted(sub_img, 0.5, rect, 0.5, 1.0) # fill the box with black color
 			frame[y:int(h), x:int(w)] = res
 
 			if indexIDs[i] in previous:
 				previous_box = previous[indexIDs[i]]
 				(x2, y2) = (int(previous_box[0]), int(previous_box[1]))
 				(w2, h2) = (int(previous_box[2]), int(previous_box[3]))
-				p0 = (int(x + (w-x)/2), int(y + (h-y)/2))
-				p1 = (int(x2 + (w2-x2)/2), int(y2 + (h2-y2)/2))
-				cv2.line(frame, p0, p1, color, 3)
-				#cv2.line(frame, p0, p0, color, 3)
+				p0 = (int(x + (w-x)/2), int(y + (h-y)/2)) # actual center coords
+				p1 = (int(x2 + (w2-x2)/2), int(y2 + (h2-y2)/2)) # previous center coords
+				cv2.line(frame, p0, p1, color, 3) #draw line between the actual and the previous center coord
 
-				pts[indexIDs[i]].append(p0)
+				pts[indexIDs[i]].append(p0) # append tha actual center coordinates for drawing the motion path
 
 				# draw motion path
 				for j in range(1, len(pts[indexIDs[i]])):
@@ -274,10 +280,10 @@ while True:
 					cv2.line(frame, (pts[indexIDs[i]][j - 1]), (pts[indexIDs[i]][j]), (color), thickness)
 
 				if intersect(p0, p1, line[0], line[1]):
-					if indexIDs[i] not in already_found: # count only when we find it first time
+					if indexIDs[i] not in already_found: # count only when we find the ID for the first time
 						counter += 1
-						df_temp = pd.DataFrame({'personId': [indexIDs[i]]})
-						if counter_line_angle >= 45 and counter_line_angle <= 135:
+						df_temp = pd.DataFrame({'personId': [indexIDs[i]]}) # df with the actual personID
+						if counter_line_angle >= 45 and counter_line_angle <= 135: # if the line is vertical
 							if p0[0] > p1[0]: #if they cross the line from left to right
 								left_counter += 1
 								df_temp['direction'] = "left to right"
@@ -298,40 +304,26 @@ while True:
 						already_found.append(indexIDs[i])
 						df_temp['actual_person_counter'] = counter
 
-						df_save = df_save.append(df_temp, ignore_index=True)
+						df_save = df_save.append(df_temp, ignore_index=True) # append the actual intersection
 						cols_at_end = ['actual_person_counter']  # move this column to the end of the df
 						df_save = df_save[[c for c in df_save if c not in cols_at_end] + [c for c in cols_at_end if c in df_save]]
-						df_save.to_csv(f"output/df_save_{input_name}.csv",index=False)
+						df_save.to_csv(f"output/df_save_{input_name}.csv",index=False) # save the df
 
 			# text = "{}: {:.4f}".format(LABELS[classIDs[i]], confidences[i])
 			text = "{}".format(indexIDs[i])
 			cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 5)
 			i += 1
 
-	# draw rectangle next to the line
-	#if line[0][1] == 0 :
-		#x, y, w, h = int(line[0][0] - 50), 0 , 100, int(line[1][0])
-	#x, y, w, h = int(width_line/2-50), 0, 100, int(height_line) # if the line is vertical
-	#x, y, w, h = 0, int(height_line/2-50), int(width_line), 100 # if the line is horizontal
-	#sub_img = frame[y:y + h, x:x + w]
-	#rect = np.zeros(sub_img.shape, dtype=np.uint8)
-	#res = cv2.addWeighted(sub_img, 0.5, rect, 0.5, 1.0)
-	#frame[y:y + h, x:x + w] = res
-
-	# draw the main line
+	# draw the main counter line
 	cv2.line(frame, line[0], line[1], (0, 255, 0), 10)
 
-	# Draw black background rectangle
-	#cv2.rectangle(frame, (0, int(height_line-400)), (430,int(height_line-150)), (0, 0, 0), -1) #left to right
-	#cv2.rectangle(frame, (int(width_line-400), int(height_line-400)), (int(width_line),int(height_line-150)), (0, 0, 0), -1) #right to left
-	#cv2.rectangle(frame, (0, 0), (470, 250), (0, 0, 0), -1)  # counter
-	#cv2.rectangle(frame, (int(width_line-470), 0), (int(width_line), 250), (0, 0, 0), -1)  # left - right
+	# draw the black rectangles at the corners of the video
 	cv2.rectangle(frame, (0, int(height_line-height_line/5)), (int(width_line/8), int(height_line)), (0, 0, 0), -1)  # left to right
 	cv2.rectangle(frame, (int(width_line-width_line/8), int(height_line-height_line/5)), (int(width_line), int(height_line)),(0, 0, 0), -1)  # right to left
 	cv2.rectangle(frame, (0, 0), (int(width_line/8), int(height_line/5)), (0, 0, 0), -1)  # counter
 	cv2.rectangle(frame, (int(width_line-width_line/8), 0), (int(width_line), int(height_line/5)), (0, 0, 0), -1)  # left - right
 
-	# draw counter
+	# draw counters
 	if counter_line_angle >= 45 and counter_line_angle <= 135:
 		cv2.putText(frame, str("Left to right:"), (10,int(height_line-height_line/6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 	else:
@@ -347,9 +339,9 @@ while True:
 	cv2.putText(frame, str("Counted people:"), (5,20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 	cv2.putText(frame, str(counter), (20, int(height_line/7)), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5)
 
+	# draw the error:
 	#cv2.putText(frame, str("Error: " + str(round(abs(counter-real_counter)/real_counter,2))), (int(width_line/2), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 	#cv2.putText(frame, , (int(width_line/2+20), int(height_line / 7)), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 5)
-
 
 	if counter_line_angle >= 45 and counter_line_angle <= 135:
 		cv2.putText(frame, str("Left - Right ="), (int(width_line-width_line/9),20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)

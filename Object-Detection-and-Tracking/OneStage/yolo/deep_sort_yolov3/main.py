@@ -34,7 +34,7 @@ np.random.seed(100)
 COLORS = np.random.randint(0, 255, size=(200, 3),
 	dtype="uint8")
 
-real_counter = 55
+#real_counter = 55 #if we want to calculate the error
 
 def main(yolo):
 
@@ -131,7 +131,7 @@ def main(yolo):
                 #cv2.putText(frame, str(class_names[j]),(int(bbox[0]), int(bbox[1] -20)),0, 5e-3 * 150, (255,255,255),2)
 
         count = len(set(counter))
-        cv2.putText(frame, str("Error: " + str(round(abs(count - real_counter) / real_counter, 2))),(int(20),int(160)), 0, 5e-3 * 200, (0, 255, 0), 2)
+        #cv2.putText(frame, str("Error: " + str(round(abs(count - real_counter) / real_counter, 2))),(int(20),int(160)), 0, 5e-3 * 200, (0, 255, 0), 2)
         cv2.putText(frame, "Total Object Counter: "+str(count),(int(20), int(120)),0, 5e-3 * 200, (0,255,0),2)
         cv2.putText(frame, "Current Object Counter: "+str(i),(int(20), int(80)),0, 5e-3 * 200, (0,255,0),2)
         cv2.putText(frame, "FPS: %f"%(fps),(int(20), int(40)),0, 5e-3 * 200, (0,255,0),3)
