@@ -4,7 +4,7 @@
     
 __1. Download the code to your computer.__
         
-__2. Download [[yolov3.weights]](https://pjreddie.com/media/files/yolov3.weights)__ and place it in `deep_sort_yolov3/model_data/`
+__2. Download [yolov3.weights](https://pjreddie.com/media/files/yolov3.weights)__ and place it in `deep_sort_yolov3/model_data/`
 
 __3. Convert the Darknet YOLO model to a Keras model:__
 ```
