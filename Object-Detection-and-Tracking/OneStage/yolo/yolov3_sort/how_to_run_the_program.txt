@@ -1,0 +1,1 @@
+python main.py --input ../input/airport_walking.mp4 --output output/airport_walking_output.avi --yolo yolo-obj --angle 180 --topOrBottom 0.4

@@ -1,0 +1,1 @@
+python main.py -c person -i ../input/airport_walking.mp4
