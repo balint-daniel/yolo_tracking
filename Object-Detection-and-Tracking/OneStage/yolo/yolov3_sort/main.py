@@ -179,6 +179,7 @@ while True:
 	boxes = []
 	confidences = []
 	classIDs = []
+	current_counter = 0  # the current number of people on the actual frame
 
 	# loop over each of the layer outputs
 	for output in layerOutputs:
@@ -340,7 +341,9 @@ while True:
 	cv2.putText(frame, str(counter), (20, int(height_line/7)), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5)
 
 	# draw the error:
-	#cv2.putText(frame, str("Error: " + str(round(abs(counter-real_counter)/real_counter,2))), (int(width_line/2), 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+	#cv2.putText(frame, str("Error: " + str(round(abs(counter-real_counter)/real_counter,2))), (int(width_line/2), 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+	cv2.putText(frame, str("Current people counter: " + str(current_counter)), (int(width_line / 2), 30),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
 	if counter_line_angle >= 45 and counter_line_angle <= 135:
 		cv2.putText(frame, str("Left - Right ="), (int(width_line-width_line/9),20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
