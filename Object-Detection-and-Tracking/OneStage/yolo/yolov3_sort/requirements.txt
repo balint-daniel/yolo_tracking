@@ -1,0 +1,7 @@
+numba==0.53.0
+numpy==1.17.5
+scipy==1.6.1
+imutils==0.5.4
+filterpy==1.1.0
+pandas==1.1.4
+scikit_learn==0.24.1
