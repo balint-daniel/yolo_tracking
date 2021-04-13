@@ -17,7 +17,7 @@ __4. Run the YOLO_DEEP_SORT:__
 ```
 $ python main.py -c [CLASS NAME] -i [INPUT VIDEO PATH]
 
-$ python main.py -c person -i ../input/airport_walking.mp4
+$ python main.py -c person -i ../input/airport_walking.mp4 --angle 180 --topOrBottom 0.4
 
 ```
 

@@ -23,6 +23,12 @@ import argparse
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input",help="path to input video", default = "./test_video/det_t1_video_00315_test.avi")
 ap.add_argument("-c", "--class",help="name of class", default = "person")
+ap.add_argument("-a", "--angle", type=int, default=90,
+    help="optionally change the angle of the counter line")
+ap.add_argument("-lr", "--leftOrRight", type=float, default=-1.0,
+    help="optionally move the vertical line left or right")
+ap.add_argument("-ud", "--topOrBottom", type=float, default=-1.0,
+    help="optionally move the horizontal line up or down")
 args = vars(ap.parse_args())
 
 class YOLO(object):

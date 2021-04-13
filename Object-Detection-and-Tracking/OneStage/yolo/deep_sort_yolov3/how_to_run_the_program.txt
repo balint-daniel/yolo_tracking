@@ -1,1 +1,1 @@
-python main.py -c person -i ../input/airport_walking.mp4
+python main.py -c person -i ../input/airport_walking.mp4 --angle 180 --topOrBottom 0.4

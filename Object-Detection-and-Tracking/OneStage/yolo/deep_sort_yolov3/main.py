@@ -24,9 +24,12 @@ backend.clear_session()
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input",help="path to input video", default = "./test_video/test.avi")
 ap.add_argument("-c", "--class",help="name of class", default = "person")
-ap.add_argument("-a", "--angle", type=int, default=90, help="optionally change the angle of the counter line")
-ap.add_argument("-lr", "--leftOrRight", type=float, default=-1.0, help="optionally move the vertical line left or right")
-ap.add_argument("-ud", "--topOrBottom", type=float, default=-1.0, help="optionally move the horizontal line up or down")
+ap.add_argument("-a", "--angle", type=int, default=90,
+    help="optionally change the angle of the counter line")
+ap.add_argument("-lr", "--leftOrRight", type=float, default=-1.0,
+    help="optionally move the vertical line left or right")
+ap.add_argument("-ud", "--topOrBottom", type=float, default=-1.0,
+    help="optionally move the horizontal line up or down")
 args = vars(ap.parse_args())
 
 # Return true if line segments AB and CD intersect
@@ -47,6 +50,9 @@ COLORS = np.random.randint(0, 255, size=(200, 3),
 #real_counter = 55 #if we want to calculate the error
 
 def main(yolo):
+    left_counter = 0
+    right_counter = 0
+    already_found = []  # list of the IDs that we've already found
 
     start = time.time()
     #Definition of the parameters
@@ -116,8 +122,6 @@ def main(yolo):
         diff_y = y1 - y2
         line = [(line[0][0], int(int(height_line) * up_down)), (line[1][0], int(int(height_line) * up_down - diff_y))]
 
-    warnings.filterwarnings('ignore')
-
     if writeVideo_flag:
     # Define the codec and create VideoWriter object
         w = int(video_capture.get(3))
@@ -184,7 +188,7 @@ def main(yolo):
             #center point
             cv2.circle(frame,  (center), 1, color, thickness)
 
-	    #draw motion path
+	        #draw motion path
             for j in range(1, len(pts[track.track_id])):
                 if pts[track.track_id][j - 1] is None or pts[track.track_id][j] is None:
                    continue
@@ -192,7 +196,55 @@ def main(yolo):
                 cv2.line(frame,(pts[track.track_id][j-1]), (pts[track.track_id][j]),(color),thickness)
                 #cv2.putText(frame, str(class_names[j]),(int(bbox[0]), int(bbox[1] -20)),0, 5e-3 * 150, (255,255,255),2)
 
-        # draw the main counter line
+            for j in range(1, len(pts[track.track_id])):
+                if pts[track.track_id][j - 1] is None or pts[track.track_id][j] is None:
+                   continue
+                p0 = (pts[track.track_id][j])  # actual center coords
+                p1 = (pts[track.track_id][j - 1]) # previous center coords
+
+                if intersect(p0, p1, line[0], line[1]):
+                    if track.track_id not in already_found:
+                        if counter_line_angle >= 45 and counter_line_angle <= 135:  # if the line is vertical
+                            if p0[0] > p1[0]:  # if they cross the line from left to right
+                                left_counter += 1
+                            else:  # if they cross the line from right to left
+                                right_counter += 1
+                        else:  # if the line is horizontal
+                            if p0[1] > p1[1]:  # if they cross the line from top to bottom
+                                left_counter += 1
+                            else:  # if they cross the line from bottom to top
+                                right_counter += 1
+                        already_found.append(track.track_id)
+
+
+        # draw the black rectangles at the corners of the video
+        cv2.rectangle(frame, (0, int(height_line - height_line / 5)), (int(width_line / 8), int(height_line)),
+                      (0, 0, 0), -1)  # left to right
+        cv2.rectangle(frame, (int(width_line - width_line / 8), int(height_line - height_line / 5)),
+                      (int(width_line), int(height_line)), (0, 0, 0), -1)  # right to left
+
+        # draw counters
+        if counter_line_angle >= 45 and counter_line_angle <= 135:
+            cv2.putText(frame, str("Left to right:"), (10, int(height_line - height_line / 6)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        else:
+            cv2.putText(frame, str("Top to bottom:"), (10, int(height_line - height_line / 6)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, str(left_counter), (20, int(height_line - 30)), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255),
+                    5)
+
+        if counter_line_angle >= 45 and counter_line_angle <= 135:
+            cv2.putText(frame, str("Right to left:"),
+                        (int(width_line - width_line / 9), int(height_line - height_line / 6)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        else:
+            cv2.putText(frame, str("Bottom to top:"),
+                        (int(width_line - width_line / 9), int(height_line - height_line / 6)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(frame, str(right_counter), (int(width_line - width_line / 11), int(height_line - 30)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 5)
+
+        #draw the main counter line
         cv2.line(frame, line[0], line[1], (0, 255, 0), 10)
 
         count = len(set(counter))
