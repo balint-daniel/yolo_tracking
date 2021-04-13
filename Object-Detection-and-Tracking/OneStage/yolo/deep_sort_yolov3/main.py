@@ -24,7 +24,17 @@ backend.clear_session()
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input",help="path to input video", default = "./test_video/test.avi")
 ap.add_argument("-c", "--class",help="name of class", default = "person")
+ap.add_argument("-a", "--angle", type=int, default=90, help="optionally change the angle of the counter line")
+ap.add_argument("-lr", "--leftOrRight", type=float, default=-1.0, help="optionally move the vertical line left or right")
+ap.add_argument("-ud", "--topOrBottom", type=float, default=-1.0, help="optionally move the horizontal line up or down")
 args = vars(ap.parse_args())
+
+# Return true if line segments AB and CD intersect
+def intersect(A,B,C,D):
+	return ccw(A,C,D) != ccw(B,C,D) and ccw(A,B,C) != ccw(A,B,D)
+
+def ccw(A,B,C):
+	return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
 
 pts = [deque(maxlen=30) for _ in range(9999)]
 warnings.filterwarnings('ignore')
@@ -55,6 +65,58 @@ def main(yolo):
     writeVideo_flag = True
     #video_path = "./output/output.avi"
     video_capture = cv2.VideoCapture(args["input"])
+
+    height_line = video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    width_line = video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+
+    # rotate the line in the given angle
+    # own defined rotation
+    counter_line_angle = args["angle"]
+    if (counter_line_angle > 44 and counter_line_angle < 91):
+        move = 45 / counter_line_angle
+        line = [(int(int(width_line) * move), 0), (int(int(width_line) * (1 - move)), int(height_line))]
+    elif (counter_line_angle > 90 and counter_line_angle < 136):
+        number = 90 - (counter_line_angle - 90)
+        move = 45 / number
+        line = [(int(int(width_line) * (1 - move)), 0), (int(int(width_line) * move), int(height_line))]
+    elif (counter_line_angle > -1 and counter_line_angle < 45):
+        move = (45 / (counter_line_angle + 45)) - 0.5
+        line = [(int(width_line), int(int(height_line) * move)), (0, int(int(height_line) * (1 - move)))]
+    elif (counter_line_angle > 135 and counter_line_angle < 181):
+        number1 = 135 - (counter_line_angle - 135)
+        number2 = 90 - (number1 - 90)
+        move = 45 / number2
+        line = [(0, int(int(height_line) * (1 - move))), (int(width_line), int(int(height_line) * move))]
+    else:
+        raise Exception('Wrong input number for angle!') from None
+
+    # move the vertical line left or right
+    # if the "leftOrRight" value is 1.0 then the line is on the right hand side of the video
+    # if the "leftOrRight" value is 0.0 then the line is on the left hand side of the video
+    # if the "leftOrRight" value is 0.5 then the vertical line is on the center of the video
+    # etc.
+    left_right = args["leftOrRight"]  # for vertical lines
+    if left_right <= 1.0 and left_right >= 0.0 and counter_line_angle >= 45 and counter_line_angle <= 135:  # if its not default
+        x1 = line[0][0]
+        x2 = line[1][0]
+        diff_x = x1 - x2  # save the distance between the points
+        line = [(int(int(width_line) * left_right), 0), (int(int(width_line) * left_right - diff_x), int(height_line))]
+
+    # move the horizontal line up or down
+    # if the "topOrBottom" value is 1.0 then the line is on the bottom of the video
+    # if the "topOrBottom" value is 0.0 then the line is on the top of the video
+    # if the "topOrBottom" value is 0.5 then the horizontal line is on the center of the video
+    # etc.
+    up_down = args["topOrBottom"]  # for horizontal lines
+    if (up_down <= 1.0 and up_down >= 0.0 and counter_line_angle > 135 and counter_line_angle <= 180) or \
+            (
+                    up_down <= 1.0 and up_down >= 0.0 and counter_line_angle >= 0 and counter_line_angle < 45):  # if its not default
+        y1 = line[0][1]
+        y2 = line[1][1]
+        diff_y = y1 - y2
+        line = [(line[0][0], int(int(height_line) * up_down)), (line[1][0], int(int(height_line) * up_down - diff_y))]
+
+    warnings.filterwarnings('ignore')
 
     if writeVideo_flag:
     # Define the codec and create VideoWriter object
@@ -129,6 +191,9 @@ def main(yolo):
                 thickness = int(np.sqrt(64 / float(j + 1)) * 2)
                 cv2.line(frame,(pts[track.track_id][j-1]), (pts[track.track_id][j]),(color),thickness)
                 #cv2.putText(frame, str(class_names[j]),(int(bbox[0]), int(bbox[1] -20)),0, 5e-3 * 150, (255,255,255),2)
+
+        # draw the main counter line
+        cv2.line(frame, line[0], line[1], (0, 255, 0), 10)
 
         count = len(set(counter))
         #cv2.putText(frame, str("Error: " + str(round(abs(count - real_counter) / real_counter, 2))),(int(20),int(160)), 0, 5e-3 * 200, (0, 255, 0), 2)
