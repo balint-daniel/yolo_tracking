@@ -263,6 +263,8 @@ while True:
 			res = cv2.addWeighted(sub_img, 0.5, rect, 0.5, 1.0) # fill the box with black color
 			frame[y:int(h), x:int(w)] = res
 
+			current_counter += 1  # increase the current number of found people
+
 			if indexIDs[i] in previous:
 				previous_box = previous[indexIDs[i]]
 				(x2, y2) = (int(previous_box[0]), int(previous_box[1]))
@@ -304,9 +306,10 @@ while True:
 								df_temp['actual_bottom_to_top_counter'] = right_counter
 						already_found.append(indexIDs[i])
 						df_temp['actual_person_counter'] = counter
+						df_temp['every_person_on_the_actual_frame'] = current_counter
 
 						df_save = df_save.append(df_temp, ignore_index=True) # append the actual intersection
-						cols_at_end = ['actual_person_counter']  # move this column to the end of the df
+						cols_at_end = ['actual_person_counter','every_person_on_the_actual_frame']  # move these columns to the end of the df
 						df_save = df_save[[c for c in df_save if c not in cols_at_end] + [c for c in cols_at_end if c in df_save]]
 						df_save.to_csv(f"output/df_save_{input_name}.csv",index=False) # save the df
 

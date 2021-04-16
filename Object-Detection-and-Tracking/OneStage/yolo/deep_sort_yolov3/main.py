@@ -8,6 +8,7 @@ from timeit import time
 import warnings
 import cv2
 import numpy as np
+import pandas as pd
 import argparse
 from PIL import Image
 from yolo import YOLO
@@ -53,6 +54,11 @@ def main(yolo):
     left_counter = 0
     right_counter = 0
     already_found = []  # list of the IDs that we've already found
+    df_save = pd.DataFrame(columns=['personId', 'direction','every_person_on_the_actual_frame'])  # df containing the intersects
+    input_name = args['input']
+    input_name = input_name.split('/')[-1]
+    input_name = input_name.split('.')[0]  # save the df based on the input file name
+    new_intersection = False
 
     start = time.time()
     #Definition of the parameters
@@ -204,18 +210,38 @@ def main(yolo):
 
                 if intersect(p0, p1, line[0], line[1]):
                     if track.track_id not in already_found:
+                        new_intersection = True
+                        df_temp = pd.DataFrame({'personId': [track.track_id]})  # df with the actual personID
                         if counter_line_angle >= 45 and counter_line_angle <= 135:  # if the line is vertical
                             if p0[0] > p1[0]:  # if they cross the line from left to right
                                 left_counter += 1
+                                df_temp['direction'] = "left to right"
+                                df_temp['actual_left_to_right_counter'] = left_counter
                             else:  # if they cross the line from right to left
                                 right_counter += 1
+                                df_temp['direction'] = "right to left"
+                                df_temp['actual_right_to_left_counter'] = right_counter
                         else:  # if the line is horizontal
                             if p0[1] > p1[1]:  # if they cross the line from top to bottom
                                 left_counter += 1
+                                df_temp['direction'] = "top to bottom"
+                                df_temp['actual_top_to_bottom_counter'] = left_counter
                             else:  # if they cross the line from bottom to top
                                 right_counter += 1
+                                df_temp['direction'] = "bottom to top"
+                                df_temp['actual_bottom_to_top_counter'] = right_counter
                         already_found.append(track.track_id)
+                        df_temp['actual_total_person_counter'] = len(set(counter))
+                        df_save = df_save.append(df_temp, ignore_index=True)  # append the actual intersection
+                        df_save.to_csv(f"output/df_save_{input_name}.csv", index=False)  # save the df
 
+        if(new_intersection):
+            new_intersection = False
+            df_save['every_person_on_the_actual_frame'].iloc[df_save.shape[0]-1] = i
+            cols_at_end = ['every_person_on_the_actual_frame','actual_total_person_counter']
+            df_save = df_save[
+                [c for c in df_save if c not in cols_at_end] + [c for c in cols_at_end if c in df_save]]
+            df_save.to_csv(f"output/df_save_{input_name}.csv", index=False)  # save the df
 
         # draw the black rectangles at the corners of the video
         cv2.rectangle(frame, (0, int(height_line - height_line / 5)), (int(width_line / 8), int(height_line)),
